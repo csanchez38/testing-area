@@ -1,0 +1,76 @@
+import streamlit as st
+import pandas as pd
+import matplotlib.pyplot as plt
+import io
+import requests
+
+# Title of the app
+st.title("California 2019 Air Quality Visualization App")
+
+# GitHub raw file URL
+github_url = "https://raw.githubusercontent.com/your-username/your-repo/main/California2019.xlsx"
+
+try:
+    # Fetch the file from GitHub
+    response = requests.get(github_url)
+    response.raise_for_status()  # Raise an error for invalid responses
+
+    # Load the Excel file into memory
+    excel_data = pd.ExcelFile(io.BytesIO(response.content))
+    sheet_names = excel_data.sheet_names
+
+    # Dropdown to select the sheet
+    selected_sheet = st.selectbox("Select a sheet to analyze", sheet_names)
+
+    # Read the selected sheet into a DataFrame
+    data = pd.read_excel(io.BytesIO(response.content), sheet_name=selected_sheet)
+
+    # Check if required columns are present
+    required_columns = ['Date', 'Daily Mean', 'Units', 'Daily AQI Value']
+    if not all(col in data.columns for col in required_columns):
+        st.error(f"The selected sheet must contain the following columns: {', '.join(required_columns)}")
+    else:
+        # Drop rows where 'Date' or 'Daily Mean' are missing
+        data = data.dropna(subset=['Date', 'Daily Mean'])
+
+        # Convert 'Date' column to datetime format for proper handling
+        data['Date'] = pd.to_datetime(data['Date'], errors='coerce')
+        data = data.dropna(subset=['Date'])  # Drop rows where Date conversion fails
+
+        st.write(f"### Data Preview from {selected_sheet} sheet (Filtered)")
+        st.dataframe(data.head())
+
+        # Dropdowns for selecting columns
+        x_column = st.selectbox("Select X-axis column", ['Date'])
+        y_column = st.selectbox("Select Y-axis column", ['Daily Mean', 'Daily AQI Value'])
+
+        # Dropdown for graph type
+        graph_type = st.selectbox(
+            "Select Graph Type",
+            ["Line", "Scatter", "Bar"]
+        )
+
+        # Plot button
+        if st.button("Plot Graph"):
+            fig, ax = plt.subplots()
+
+            if graph_type == "Line":
+                ax.plot(data[x_column], data[y_column], marker='o')
+                ax.set_title(f"{y_column} vs {x_column} (Line Plot)")
+
+            elif graph_type == "Scatter":
+                ax.scatter(data[x_column], data[y_column])
+                ax.set_title(f"{y_column} vs {x_column} (Scatter Plot)")
+
+            elif graph_type == "Bar":
+                ax.bar(data[x_column], data[y_column])
+                ax.set_title(f"{y_column} vs {x_column} (Bar Chart)")
+
+            ax.set_xlabel(x_column)
+            ax.set_ylabel(y_column)
+            plt.xticks(rotation=45)  # Rotate x-axis labels for better readability
+            st.pyplot(fig)
+
+        st.write("Tip: Ensure the selected columns are numeric for meaningful plots.")
+except requests.exceptions.RequestException as e:
+    st.error(f"Unable to fetch the file from GitHub. Please ensure the URL is correct and publicly accessible.\n\nError: {e}")
