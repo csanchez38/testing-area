@@ -1,3 +1,13 @@
+import streamlit as st
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# Define the file name (assuming it is in the same directory as your script)
+file_name = "California2019.xlsx"
+
+# Title of the app
+st.title("California 2019 Air Quality Visualization App")
+
 try:
     # Read the Excel file and list available sheets
     excel_data = pd.ExcelFile(file_name)
@@ -17,7 +27,7 @@ try:
     if not all(col in data.columns for col in required_columns):
         st.error(f"Required columns are missing: {', '.join([col for col in required_columns if col not in data.columns])}")
     else:
-        # Filter rows where 'Date' or 'Daily Mean' are missing
+        # Drop rows where 'Date' or 'Daily Mean' are missing
         data = data.dropna(subset=required_columns)
 
         # Convert 'Date' column to datetime
@@ -59,5 +69,10 @@ try:
             plt.xticks(rotation=45)  # Rotate x-axis labels for better readability
             st.pyplot(fig)
 
+        st.write("Tip: Ensure the selected columns are numeric for meaningful plots.")
+
 except FileNotFoundError:
-    st.error("The file 'California2019.xlsx' was not found. Ensure it is included in the repository.")
+    st.error(f"The file '{file_name}' was not found. Ensure it is included in the repository.")
+
+except Exception as e:
+    st.error(f"An unexpected error occurred: {e}")
