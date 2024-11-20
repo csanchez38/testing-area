@@ -17,8 +17,16 @@ try:
     selected_sheet = st.selectbox("Select a sheet to analyze", sheet_names)
 
     # Read the selected sheet into a DataFrame
-    data = pd.read_excel(file_name, sheet_name=selected_sheet, header=None)  # No header assumed
-    data.columns = ['Date', 'Daily Mean', 'Units', 'Daily AQI Value']  # Rename columns explicitly
+    data = pd.read_excel(file_name, sheet_name=selected_sheet, header=0)
+
+    # Rename columns dynamically based on their position
+    column_mapping = {
+        data.columns[0]: 'Date',
+        data.columns[1]: 'Measurement',
+        data.columns[2]: 'Units',
+        data.columns[3]: 'Daily AQI Value'
+    }
+    data.rename(columns=column_mapping, inplace=True)
 
     # Convert 'Date' column to datetime format
     data['Date'] = pd.to_datetime(data['Date'], format='%m/%d/%Y', errors='coerce')
@@ -28,11 +36,11 @@ try:
     data = data.sort_values(by='Date')
 
     # Ensure numeric columns are clean
-    data['Daily Mean'] = pd.to_numeric(data['Daily Mean'], errors='coerce')
+    data['Measurement'] = pd.to_numeric(data['Measurement'], errors='coerce')
     data['Daily AQI Value'] = pd.to_numeric(data['Daily AQI Value'], errors='coerce')
 
-    # Drop rows where 'Daily Mean' or 'Daily AQI Value' are missing
-    data = data.dropna(subset=['Daily Mean', 'Daily AQI Value'])
+    # Drop rows where 'Measurement' or 'Daily AQI Value' are missing
+    data = data.dropna(subset=['Measurement', 'Daily AQI Value'])
 
     # Display a preview of the filtered and sorted data
     st.write("Filtered and Sorted Data Preview:")
@@ -40,7 +48,7 @@ try:
 
     # Dropdowns for selecting columns
     x_column = st.selectbox("Select X-axis column", ['Date'])
-    y_column = st.selectbox("Select Y-axis column", ['Daily Mean', 'Daily AQI Value'])
+    y_column = st.selectbox("Select Y-axis column", ['Measurement', 'Daily AQI Value'])
 
     # Dropdown for data aggregation
     aggregation = st.selectbox(
