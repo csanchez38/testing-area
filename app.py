@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
-from glob import glob
 
 # Title of the app
 st.title("California Air Quality Trend Analysis")
@@ -90,12 +89,14 @@ if selected_files:
         # Aggregate data based on the selected aggregation level
         if aggregation == "Weekly":
             # Resample only numeric columns and reset the index
-            numeric_data = combined_data.set_index('Date')[['Measurement', 'Daily AQI Value', 'Year']].resample('W').mean().reset_index()
-            combined_data = numeric_data
+            numeric_data = combined_data.set_index('Date')[['Measurement', 'Daily AQI Value']].resample('W').mean()
+            numeric_data['Year'] = combined_data.set_index('Date').resample('W')['Year'].first()
+            combined_data = numeric_data.reset_index()
         elif aggregation == "Monthly":
             # Resample only numeric columns and reset the index
-            numeric_data = combined_data.set_index('Date')[['Measurement', 'Daily AQI Value', 'Year']].resample('M').mean().reset_index()
-            combined_data = numeric_data
+            numeric_data = combined_data.set_index('Date')[['Measurement', 'Daily AQI Value']].resample('M').mean()
+            numeric_data['Year'] = combined_data.set_index('Date').resample('M')['Year'].first()
+            combined_data = numeric_data.reset_index()
 
         # Ensure no missing data after aggregation
         combined_data = combined_data[[x_column, y_column, 'Year']].dropna()
