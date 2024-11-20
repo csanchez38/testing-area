@@ -17,20 +17,15 @@ if selected_files:
         # Combine data from selected files
         all_data = []
         for file_name in selected_files:
-            # Extract the year from the file name
             year = file_name.split("California")[1].split(".xlsx")[0]
-            
-            # Read the data
             excel_data = pd.ExcelFile(file_name)
             sheet_names = excel_data.sheet_names
 
-            # Dropdown to select the sheet (for the first file only, default to the first sheet for others)
+            # Select a pollutant to analyze (from the first file)
             if len(all_data) == 0:
                 selected_sheet = st.selectbox("Select a sheet to analyze", sheet_names)
-            else:
-                selected_sheet = sheet_names[0]  # Default to the first sheet for subsequent files
-
-            # Read the selected sheet into a DataFrame
+            
+            # Load the selected sheet
             data = pd.read_excel(file_name, sheet_name=selected_sheet, header=0)
             
             # Rename columns dynamically based on their position
@@ -42,45 +37,46 @@ if selected_files:
             }
             data.rename(columns=column_mapping, inplace=True)
 
-            # Convert 'Date' column to datetime format
+            # Convert 'Date' to datetime and add 'Year' and 'Month'
             data['Date'] = pd.to_datetime(data['Date'], format='%m/%d/%Y', errors='coerce')
-            data = data.dropna(subset=['Date'])  # Drop rows where 'Date' conversion failed
-
-            # Add "Year" and "Month" columns
-            data['Year'] = data['Date'].dt.year
+            data = data.dropna(subset=['Date'])
+            data['Year'] = int(year)
             data['Month'] = data['Date'].dt.month
 
-            # Append the data
+            # Clean specific pollutants
+            if selected_sheet == "Pb":
+                data['Daily AQI Value'] = pd.to_numeric(data['Daily AQI Value'], errors='coerce')
+
             all_data.append(data)
 
-        # Combine all the data into one DataFrame
+        # Combine all data into one DataFrame
         combined_data = pd.concat(all_data, ignore_index=True)
 
-        # Ensure numeric columns are clean
+        # Clean numeric columns
         combined_data['Measurement'] = pd.to_numeric(combined_data['Measurement'], errors='coerce')
         combined_data['Daily AQI Value'] = pd.to_numeric(combined_data['Daily AQI Value'], errors='coerce')
 
         # Drop rows where 'Measurement' is missing
         combined_data = combined_data.dropna(subset=['Measurement'])
 
-        # Extract the unit of measurement dynamically
-        unit_of_measurement = combined_data['Units'].iloc[0] if 'Units' in combined_data.columns and not combined_data['Units'].isnull().all() else "Unknown Units"
+        # Extract unit of measurement dynamically
+        unit_of_measurement = combined_data['Units'].iloc[0] if 'Units' in combined_data.columns else "Unknown Units"
 
-        # Inform the user if the AQI column is missing or empty
+        # Inform the user if the AQI column is missing
         if combined_data['Daily AQI Value'].isnull().all():
             st.warning("The 'Daily AQI Value' column is empty or unavailable for this dataset. Only the 'Measurement' column is available for plotting.")
             available_y_columns = ['Measurement']
         else:
             available_y_columns = ['Measurement', 'Daily AQI Value']
 
-        # Display a preview of the combined data
+        # Display preview of combined data
         st.write("Combined Data Preview:")
         st.dataframe(combined_data.head())
 
         # Dropdown for selecting Y-axis column
         y_column = st.selectbox("Select Y-axis column", available_y_columns)
 
-        # Group data by Year and Month for the line graph
+        # Group data by Year and Month for plotting
         monthly_data = combined_data.groupby(['Year', 'Month'])[y_column].mean().reset_index()
 
         # Plot button
@@ -90,23 +86,23 @@ if selected_files:
             for year in selected_years:
                 year_data = monthly_data[monthly_data['Year'] == year]
                 ax.plot(
-                    year_data['Month'], 
-                    year_data[y_column], 
-                    marker='o', 
-                    linestyle='-', 
+                    year_data['Month'],
+                    year_data[y_column],
+                    marker='o',
+                    linestyle='-',
                     label=str(year),
                     markersize=4,
                 )
-            ax.set_title(f"Monthly {y_column} Trends")
+            ax.set_title(f"Monthly {y_column} Trends ({selected_sheet})")
             ax.set_xlabel("Month")
             ax.set_ylabel(f"{y_column} ({unit_of_measurement})")
             ax.legend(title="Year", loc='upper left', bbox_to_anchor=(1, 1))
             ax.grid(True, linestyle='--', alpha=0.7)
-            plt.xticks(ticks=range(1, 13), labels=['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])
+            ax.set_xticks(range(1, 13))
+            ax.set_xticklabels(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])
             st.pyplot(fig)
 
     except FileNotFoundError:
-        st.error(f"One or more selected files were not found. Ensure they are included in the repository.")
-
+        st.error("One or more selected files were not found. Ensure they are included in the repository.")
     except Exception as e:
         st.error(f"An unexpected error occurred: {e}")
