@@ -31,7 +31,7 @@ try:
     data['Daily Mean'] = pd.to_numeric(data['Daily Mean'], errors='coerce')
     data['Daily AQI Value'] = pd.to_numeric(data['Daily AQI Value'], errors='coerce')
 
-    # Debugging info: Show filtered data
+    # Display a preview of the filtered data
     st.write("Filtered Data Preview:")
     st.dataframe(data.head())
 
@@ -39,7 +39,7 @@ try:
     x_column = st.selectbox("Select X-axis column", ['Date'])
     y_column = st.selectbox("Select Y-axis column", ['Daily Mean', 'Daily AQI Value'])
 
-    # Dropdown for data simplification
+    # Dropdown for data aggregation
     aggregation = st.selectbox(
         "Simplify data by:",
         ["None (Daily Data)", "Weekly", "Monthly"]
@@ -51,17 +51,17 @@ try:
         ["Line", "Scatter", "Bar"]
     )
 
-    # Simplify the data based on aggregation level
+    # Simplify the data based on the selected aggregation level
     if aggregation == "Weekly":
         data = data.set_index('Date').resample('W').mean().reset_index()
     elif aggregation == "Monthly":
         data = data.set_index('Date').resample('M').mean().reset_index()
 
+    # Ensure no missing data after simplification
+    data = data[[x_column, y_column]].dropna()
+
     # Plot button
     if st.button("Plot Graph"):
-        # Ensure no missing data after simplification
-        data = data[[x_column, y_column]].dropna()
-
         # Create the plot
         fig, ax = plt.subplots()
 
