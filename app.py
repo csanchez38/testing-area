@@ -3,7 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # Title of the app
-st.title("California Air Quality Trend Analysis: Weekly and Monthly Comparison")
+st.title("California Air Quality Weekly Trends: Improved Readability")
 
 # File selection
 file_names = [f"California{year}.xlsx" for year in range(2019, 2025)]
@@ -45,7 +45,6 @@ if selected_files:
 
             # Add a "Year", "Month", and "Week" column
             data['Year'] = data['Date'].dt.year
-            data['Month'] = data['Date'].dt.month
             data['Week'] = data['Date'].dt.isocalendar().week
 
             # Append the data
@@ -78,48 +77,52 @@ if selected_files:
         # Dropdown for selecting Y-axis column
         y_column = st.selectbox("Select Y-axis column", available_y_columns)
 
-        # Dropdown for choosing aggregation level
-        aggregation = st.selectbox("Compare data by:", ["Weekly", "Monthly"])
+        # Allow users to filter by specific years
+        available_years = combined_data['Year'].unique()
+        selected_years = st.multiselect("Select years to display", available_years, default=available_years)
 
-        # Aggregate data based on the selected aggregation level
-        if aggregation == "Weekly":
-            grouped_data = combined_data.groupby(['Year', 'Week'])[y_column].mean().reset_index()
-            x_column = 'Week'
-        elif aggregation == "Monthly":
-            grouped_data = combined_data.groupby(['Year', 'Month'])[y_column].mean().reset_index()
-            x_column = 'Month'
+        # Filter the data to include only the selected years
+        filtered_data = combined_data[combined_data['Year'].isin(selected_years)]
+
+        # Group data by Year and Week
+        weekly_data = filtered_data.groupby(['Year', 'Week'])[y_column].mean().reset_index()
 
         # Plot button
         if st.button("Plot Graph"):
             # Create the plot
-            fig, ax = plt.subplots()
+            fig, ax = plt.subplots(figsize=(12, 6))
 
             # Plot data for each year
-            for year in grouped_data['Year'].unique():
-                year_data = grouped_data[grouped_data['Year'] == year]
-                ax.plot(year_data[x_column], year_data[y_column], marker='o', linestyle='-', label=str(year))
+            for year in weekly_data['Year'].unique():
+                year_data = weekly_data[weekly_data['Year'] == year]
+                ax.plot(
+                    year_data['Week'], 
+                    year_data[y_column], 
+                    marker='o', 
+                    linestyle='-', 
+                    label=str(year),
+                    markersize=4,  # Adjust marker size for readability
+                )
 
-            ax.set_title(f"{y_column} vs {aggregation} ({aggregation} Comparison)")
+            ax.set_title(f"Weekly {y_column} Trends (Improved Readability)")
 
             # Set labels with the appropriate unit of measurement
-            ax.set_xlabel(aggregation)
+            ax.set_xlabel("Week")
             if y_column == "Measurement":
                 ax.set_ylabel(f"Measurement ({unit_of_measurement})")
             elif y_column == "Daily AQI Value":
                 ax.set_ylabel("Daily AQI Value")
 
             # Add a legend for years
-            ax.legend(title="Year")
+            ax.legend(title="Year", loc='upper left', bbox_to_anchor=(1, 1))  # Move legend outside the plot
 
             # Enhance readability
             ax.grid(True, which='major', linestyle='--', linewidth=0.5, alpha=0.7)  # Add gridlines
-            if aggregation == "Monthly":
-                plt.xticks(ticks=range(1, 13), labels=['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])
-            ax.set_xticks(range(1, max(grouped_data[x_column]) + 1))
+            ax.set_xticks(range(1, 54))  # Weeks range from 1 to 53
             plt.xticks(rotation=45)  # Rotate x-axis labels for better readability
 
             st.pyplot(fig)
-            st.write(f"Displaying {aggregation.lower()} data grouped by year.")
+            st.write(f"Displaying weekly trends for selected years.")
 
     except FileNotFoundError:
         st.error(f"One or more selected files were not found. Ensure they are included in the repository.")
