@@ -52,10 +52,10 @@ selected_sheet = st.sidebar.selectbox("Select Pollutant Sheet", sheet_options)
 st.sidebar.write(f"**Measurement Info**: {measurement_info[selected_sheet]}")
 
 # Measurement type options
-measurement_options = {
-    "Measurement": "Measurement (column B)",
-    "AQI": "Daily AQI Value",
-}
+measurement_options = {"Measurement": "Measurement (column B)"}
+if selected_sheet != "Pb":  # Only add AQI if not Pb
+    measurement_options["AQI"] = "Daily AQI Value"
+
 selected_measurement = st.sidebar.radio("Select Data Type", list(measurement_options.keys()))
 
 # Year selection
@@ -107,22 +107,24 @@ if dataframes:
         ax.set_xticklabels(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])
         st.pyplot(line_fig)
 
-        # Bar Chart for Total Values by Year
-        st.subheader(f"{selected_sheet} Total Values by Year")
-        bar_data = all_data.groupby('Year')[measurement_column_name].sum().reset_index()
-        bar_fig, ax = plt.subplots()
-        ax.bar(bar_data['Year'], bar_data[measurement_column_name])
-        ax.set_title(f"Total {measurement_column_name} by Year")
-        ax.set_xlabel("Year")
-        ax.set_ylabel(f"Total {measurement_column_name}")
-        st.pyplot(bar_fig)
+        # Only show Bar Chart and Pie Chart if Measurement is selected
+        if selected_measurement == "Measurement":
+            # Bar Chart for Total Values by Year
+            st.subheader(f"{selected_sheet} Total Values by Year")
+            bar_data = all_data.groupby('Year')[measurement_column_name].sum().reset_index()
+            bar_fig, ax = plt.subplots()
+            ax.bar(bar_data['Year'], bar_data[measurement_column_name])
+            ax.set_title(f"Total {measurement_column_name} by Year")
+            ax.set_xlabel("Year")
+            ax.set_ylabel(f"Total {measurement_column_name}")
+            st.pyplot(bar_fig)
 
-        # Pie Chart for Proportions by Year
-        st.subheader(f"{selected_sheet} Proportion of Total Values by Year")
-        pie_fig, ax = plt.subplots()
-        ax.pie(bar_data[measurement_column_name], labels=bar_data['Year'], autopct='%1.1f%%', startangle=90)
-        ax.set_title(f"Proportion of {measurement_column_name} by Year")
-        st.pyplot(pie_fig)
+            # Pie Chart for Proportions by Year
+            st.subheader(f"{selected_sheet} Proportion of Total Values by Year")
+            pie_fig, ax = plt.subplots()
+            ax.pie(bar_data[measurement_column_name], labels=bar_data['Year'], autopct='%1.1f%%', startangle=90)
+            ax.set_title(f"Proportion of {measurement_column_name} by Year")
+            st.pyplot(pie_fig)
 
         # Display grouped data
         st.subheader("Grouped Data (Monthly Averages)")
