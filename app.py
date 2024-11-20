@@ -3,7 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # Title of the app
-st.title("California Air Quality Trends with Monthly Bar Comparison")
+st.title("California Air Quality Trends with Monthly Bar and Line Comparison")
 
 # File selection
 file_names = [f"California{year}.xlsx" for year in range(2019, 2025)]
@@ -86,13 +86,13 @@ if selected_files:
         # Group data for line and bar graphs
         monthly_data = combined_data.groupby(['Year', 'Month'])[y_column].mean().reset_index()
 
-        # Ensure every year has all 12 months
+        # Create a complete dataset for bar charts (fill missing months with 0)
         complete_months = pd.DataFrame(
             [(year, month) for year in selected_years for month in range(1, 13)],
             columns=['Year', 'Month']
         )
-        monthly_data = pd.merge(complete_months, monthly_data, on=['Year', 'Month'], how='left')
-        monthly_data[y_column].fillna(0, inplace=True)  # Fill missing values with 0
+        bar_data = pd.merge(complete_months, monthly_data, on=['Year', 'Month'], how='left')
+        bar_data[y_column].fillna(0, inplace=True)  # Fill missing values with 0
 
         # Plot button
         if st.button("Plot Graph"):
@@ -124,7 +124,7 @@ if selected_files:
                 months = range(1, 13)
 
                 for i, year in enumerate(selected_years):
-                    year_data = monthly_data[monthly_data['Year'] == year]
+                    year_data = bar_data[bar_data['Year'] == year]
                     ax.bar(
                         [m + (i * width) for m in months],
                         year_data[y_column].values,
