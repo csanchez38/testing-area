@@ -12,6 +12,15 @@ file_names = {
     "2019": "California2019.xlsx",
 }
 
+# Measurement information for each sheet
+measurement_info = {
+    "CO": "Measured in parts per million (ppm)",
+    "Pb": "Measured in micrograms per cubic meter (µg/m³)",
+    "NO2": "Measured in parts per billion (ppb)",
+    "Ozone": "Measured in parts per million (ppm)",
+    "PM2.5": "Measured in micrograms per cubic meter (µg/m³)",
+}
+
 # Function to load data
 def load_data(file, sheet_name):
     try:
@@ -33,25 +42,43 @@ def load_data(file, sheet_name):
         return pd.DataFrame(), None
 
 # Streamlit app
-st.title("Year-to-Year Comparison for California Air Quality Data")
+st.title("California Air Quality Data Viewer")
 
 # Sidebar for options
 sheet_options = ["CO", "Pb", "NO2", "Ozone", "PM2.5"]
 selected_sheet = st.sidebar.selectbox("Select Pollutant Sheet", sheet_options)
 
+# Display measurement details for the selected sheet
+st.sidebar.write(f"**Measurement Info**: {measurement_info[selected_sheet]}")
+
+# Measurement type options
+measurement_options = {
+    "Measurement": "Measurement (column B)",
+    "AQI": "Daily AQI Value",
+}
+selected_measurement = st.sidebar.radio("Select Data Type", list(measurement_options.keys()))
+
+# Year selection
+all_years = list(file_names.keys())
+selected_years = st.sidebar.multiselect("Select Years", all_years, default=all_years)
+
 # Load and combine data
 dataframes = []
 measurement_column_name = None  # This will be dynamically set
 for year, file in file_names.items():
-    df, measurement_col = load_data(file, selected_sheet)
-    if not df.empty:
-        dataframes.append(df)
-        # Set the measurement column name based on the first loaded file
-        if measurement_column_name is None:
-            measurement_column_name = measurement_col
+    if year in selected_years:  # Only load selected years
+        df, measurement_col = load_data(file, selected_sheet)
+        if not df.empty:
+            dataframes.append(df)
+            # Set the measurement column name based on the first loaded file
+            if measurement_column_name is None:
+                measurement_column_name = measurement_col
 
 if dataframes:
     all_data = pd.concat(dataframes, ignore_index=True)
+
+    if selected_measurement == "AQI":
+        measurement_column_name = "Daily AQI Value"
 
     if measurement_column_name not in all_data.columns:
         st.error(f"The selected measurement column '{measurement_column_name}' is not available in the {selected_sheet} sheet.")
@@ -79,6 +106,23 @@ if dataframes:
         ax.set_xticks(range(1, 13))
         ax.set_xticklabels(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])
         st.pyplot(line_fig)
+
+        # Bar Chart for Total Values by Year
+        st.subheader(f"{selected_sheet} Total Values by Year")
+        bar_data = all_data.groupby('Year')[measurement_column_name].sum().reset_index()
+        bar_fig, ax = plt.subplots()
+        ax.bar(bar_data['Year'], bar_data[measurement_column_name])
+        ax.set_title(f"Total {measurement_column_name} by Year")
+        ax.set_xlabel("Year")
+        ax.set_ylabel(f"Total {measurement_column_name}")
+        st.pyplot(bar_fig)
+
+        # Pie Chart for Proportions by Year
+        st.subheader(f"{selected_sheet} Proportion of Total Values by Year")
+        pie_fig, ax = plt.subplots()
+        ax.pie(bar_data[measurement_column_name], labels=bar_data['Year'], autopct='%1.1f%%', startangle=90)
+        ax.set_title(f"Proportion of {measurement_column_name} by Year")
+        st.pyplot(pie_fig)
 
         # Display grouped data
         st.subheader("Grouped Data (Monthly Averages)")
