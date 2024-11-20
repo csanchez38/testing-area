@@ -37,10 +37,18 @@ try:
 
     # Ensure numeric columns are clean
     data['Measurement'] = pd.to_numeric(data['Measurement'], errors='coerce')
-    data['Daily AQI Value'] = pd.to_numeric(data['Daily AQI Value'], errors='coerce')
+    if 'Daily AQI Value' in data.columns:
+        data['Daily AQI Value'] = pd.to_numeric(data['Daily AQI Value'], errors='coerce')
 
-    # Drop rows where 'Measurement' or 'Daily AQI Value' are missing
-    data = data.dropna(subset=['Measurement', 'Daily AQI Value'])
+    # Drop rows where 'Measurement' is missing
+    data = data.dropna(subset=['Measurement'])
+
+    # Inform the user if the AQI column is missing or empty
+    if data['Daily AQI Value'].isnull().all():
+        st.warning("The 'Daily AQI Value' column is empty or unavailable for this dataset. Only the 'Measurement' column is available for plotting.")
+        available_y_columns = ['Measurement']
+    else:
+        available_y_columns = ['Measurement', 'Daily AQI Value']
 
     # Display a preview of the filtered and sorted data
     st.write("Filtered and Sorted Data Preview:")
@@ -48,7 +56,7 @@ try:
 
     # Dropdowns for selecting columns
     x_column = st.selectbox("Select X-axis column", ['Date'])
-    y_column = st.selectbox("Select Y-axis column", ['Measurement', 'Daily AQI Value'])
+    y_column = st.selectbox("Select Y-axis column", available_y_columns)
 
     # Dropdown for data aggregation
     aggregation = st.selectbox(
@@ -59,11 +67,11 @@ try:
     # Aggregate data based on the selected aggregation level
     if aggregation == "Weekly":
         # Resample only numeric columns and reset the index
-        numeric_data = data.set_index('Date')[['Measurement', 'Daily AQI Value']].resample('W').mean().reset_index()
+        numeric_data = data.set_index('Date')[['Measurement'] + (['Daily AQI Value'] if 'Daily AQI Value' in data.columns else [])].resample('W').mean().reset_index()
         data = numeric_data
     elif aggregation == "Monthly":
         # Resample only numeric columns and reset the index
-        numeric_data = data.set_index('Date')[['Measurement', 'Daily AQI Value']].resample('M').mean().reset_index()
+        numeric_data = data.set_index('Date')[['Measurement'] + (['Daily AQI Value'] if 'Daily AQI Value' in data.columns else [])].resample('M').mean().reset_index()
         data = numeric_data
 
     # Ensure no missing data after aggregation
