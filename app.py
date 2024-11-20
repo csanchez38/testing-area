@@ -43,6 +43,9 @@ try:
     # Drop rows where 'Measurement' is missing
     data = data.dropna(subset=['Measurement'])
 
+    # Extract the unit of measurement dynamically
+    unit_of_measurement = data['Units'].iloc[0] if 'Units' in data.columns and not data['Units'].isnull().all() else "Unknown Units"
+
     # Inform the user if the AQI column is missing or empty
     if data['Daily AQI Value'].isnull().all():
         st.warning("The 'Daily AQI Value' column is empty or unavailable for this dataset. Only the 'Measurement' column is available for plotting.")
@@ -86,9 +89,14 @@ try:
         ax.plot(data[x_column], data[y_column], marker='o', linestyle='-', linewidth=1)
         ax.set_title(f"{y_column} vs {x_column} ({aggregation} Data)")
 
-        # Enhance readability
+        # Set labels with the appropriate unit of measurement
         ax.set_xlabel(x_column)
-        ax.set_ylabel(y_column)
+        if y_column == "Measurement":
+            ax.set_ylabel(f"Measurement ({unit_of_measurement})")
+        elif y_column == "Daily AQI Value":
+            ax.set_ylabel("Daily AQI Value")
+
+        # Enhance readability
         ax.grid(True, which='major', linestyle='--', linewidth=0.5, alpha=0.7)  # Add gridlines
         plt.xticks(rotation=45)  # Rotate x-axis labels for better readability
 
