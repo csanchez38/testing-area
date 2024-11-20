@@ -3,7 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # Title of the app
-st.title("California Air Quality Trend Analysis")
+st.title("California Air Quality Month-by-Month Comparison")
 
 # File selection
 file_names = [f"California{year}.xlsx" for year in range(2019, 2025)]
@@ -43,8 +43,9 @@ if selected_files:
             data['Date'] = pd.to_datetime(data['Date'], format='%m/%d/%Y', errors='coerce')
             data = data.dropna(subset=['Date'])  # Drop rows where 'Date' conversion failed
 
-            # Add a "Year" column
-            data['Year'] = year
+            # Add a "Year" and "Month" column
+            data['Year'] = data['Date'].dt.year
+            data['Month'] = data['Date'].dt.month
 
             # Append the data
             all_data.append(data)
@@ -52,8 +53,8 @@ if selected_files:
         # Combine all the data into one DataFrame
         combined_data = pd.concat(all_data, ignore_index=True)
 
-        # Sort the data by Date
-        combined_data = combined_data.sort_values(by='Date')
+        # Sort the data by Month
+        combined_data = combined_data.sort_values(by=['Month', 'Year'])
 
         # Ensure numeric columns are clean
         combined_data['Measurement'] = pd.to_numeric(combined_data['Measurement'], errors='coerce')
@@ -76,30 +77,11 @@ if selected_files:
         st.write("Combined Data Preview:")
         st.dataframe(combined_data.head())
 
-        # Dropdowns for selecting columns
-        x_column = st.selectbox("Select X-axis column", ['Date'])
+        # Dropdown for selecting Y-axis column
         y_column = st.selectbox("Select Y-axis column", available_y_columns)
 
-        # Dropdown for data aggregation
-        aggregation = st.selectbox(
-            "Simplify data by:",
-            ["None (Daily Data)", "Weekly", "Monthly"]
-        )
-
-        # Aggregate data based on the selected aggregation level
-        if aggregation == "Weekly":
-            # Resample only numeric columns and reset the index
-            numeric_data = combined_data.set_index('Date')[['Measurement', 'Daily AQI Value']].resample('W').mean()
-            numeric_data['Year'] = combined_data.set_index('Date').resample('W')['Year'].first()
-            combined_data = numeric_data.reset_index()
-        elif aggregation == "Monthly":
-            # Resample only numeric columns and reset the index
-            numeric_data = combined_data.set_index('Date')[['Measurement', 'Daily AQI Value']].resample('M').mean()
-            numeric_data['Year'] = combined_data.set_index('Date').resample('M')['Year'].first()
-            combined_data = numeric_data.reset_index()
-
-        # Ensure no missing data after aggregation
-        combined_data = combined_data[[x_column, y_column, 'Year']].dropna()
+        # Aggregate data by month
+        monthly_data = combined_data.groupby(['Year', 'Month'])[y_column].mean().reset_index()
 
         # Plot button
         if st.button("Plot Graph"):
@@ -107,14 +89,14 @@ if selected_files:
             fig, ax = plt.subplots()
 
             # Plot data for each year
-            for year in combined_data['Year'].unique():
-                year_data = combined_data[combined_data['Year'] == year]
-                ax.plot(year_data[x_column], year_data[y_column], marker='o', linestyle='-', label=str(year))
+            for year in monthly_data['Year'].unique():
+                year_data = monthly_data[monthly_data['Year'] == year]
+                ax.plot(year_data['Month'], year_data[y_column], marker='o', linestyle='-', label=str(year))
 
-            ax.set_title(f"{y_column} vs {x_column} ({aggregation} Data)")
+            ax.set_title(f"{y_column} vs Month (Year Comparison)")
 
             # Set labels with the appropriate unit of measurement
-            ax.set_xlabel(x_column)
+            ax.set_xlabel("Month")
             if y_column == "Measurement":
                 ax.set_ylabel(f"Measurement ({unit_of_measurement})")
             elif y_column == "Daily AQI Value":
@@ -125,10 +107,11 @@ if selected_files:
 
             # Enhance readability
             ax.grid(True, which='major', linestyle='--', linewidth=0.5, alpha=0.7)  # Add gridlines
+            plt.xticks(ticks=range(1, 13), labels=['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])
             plt.xticks(rotation=45)  # Rotate x-axis labels for better readability
 
             st.pyplot(fig)
-            st.write(f"Displaying {aggregation.lower()} data. Original data was aggregated for clarity.")
+            st.write(f"Displaying month-by-month data. Original data was grouped by year and month for clarity.")
 
     except FileNotFoundError:
         st.error(f"One or more selected files were not found. Ensure they are included in the repository.")
