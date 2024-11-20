@@ -30,6 +30,10 @@ try:
     data['Date'] = pd.to_datetime(data['Date'], errors='coerce')
     data = data.dropna(subset=['Date'])
 
+    # Ensure numeric columns are clean
+    data['Daily Mean'] = pd.to_numeric(data['Daily Mean'], errors='coerce')
+    data['Daily AQI Value'] = pd.to_numeric(data['Daily AQI Value'], errors='coerce')
+
     # Debugging info: Show filtered data
     st.write("Filtered Data Preview:")
     st.dataframe(data.head())
@@ -52,13 +56,17 @@ try:
 
     # Plot button
     if st.button("Plot Graph"):
-        fig, ax = plt.subplots()
-
         # Resample data if aggregation is selected
         if aggregation == "Weekly":
-            data = data.resample('W', on='Date').mean().reset_index()
+            data = data.set_index('Date').resample('W').mean().reset_index()
         elif aggregation == "Monthly":
-            data = data.resample('M', on='Date').mean().reset_index()
+            data = data.set_index('Date').resample('M').mean().reset_index()
+
+        # Ensure no missing data after resampling
+        data = data.dropna(subset=[x_column, y_column])
+
+        # Create the plot
+        fig, ax = plt.subplots()
 
         # Line Plot
         if graph_type == "Line":
