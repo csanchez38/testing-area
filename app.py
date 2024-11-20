@@ -86,12 +86,12 @@ if selected_files:
         # Group data for line and bar graphs
         monthly_data = combined_data.groupby(['Year', 'Month'])[y_column].mean().reset_index()
 
-        # Create a complete dataset for bar charts (fill missing months with 0)
-        complete_months = pd.DataFrame(
+        # Prepare data specifically for bar charts
+        bar_data = pd.DataFrame(
             [(year, month) for year in selected_years for month in range(1, 13)],
             columns=['Year', 'Month']
         )
-        bar_data = pd.merge(complete_months, monthly_data, on=['Year', 'Month'], how='left')
+        bar_data = pd.merge(bar_data, monthly_data, on=['Year', 'Month'], how='left')
         bar_data[y_column].fillna(0, inplace=True)  # Fill missing values with 0
 
         # Plot button
