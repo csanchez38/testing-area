@@ -20,19 +20,22 @@ try:
     data = pd.read_excel(file_name, sheet_name=selected_sheet, header=None)  # No header assumed
     data.columns = ['Date', 'Daily Mean', 'Units', 'Daily AQI Value']  # Rename columns explicitly
 
-    # Drop rows where 'Date' or 'Daily Mean' are missing
-    data = data.dropna(subset=['Date', 'Daily Mean'])
+    # Convert 'Date' column to datetime format
+    data['Date'] = pd.to_datetime(data['Date'], format='%m/%d/%Y', errors='coerce')
+    data = data.dropna(subset=['Date'])  # Drop rows where 'Date' conversion failed
 
-    # Convert 'Date' column to datetime
-    data['Date'] = pd.to_datetime(data['Date'], errors='coerce')
-    data = data.dropna(subset=['Date'])
+    # Sort the data by Date
+    data = data.sort_values(by='Date')
 
     # Ensure numeric columns are clean
     data['Daily Mean'] = pd.to_numeric(data['Daily Mean'], errors='coerce')
     data['Daily AQI Value'] = pd.to_numeric(data['Daily AQI Value'], errors='coerce')
 
-    # Display a preview of the filtered data
-    st.write("Filtered Data Preview:")
+    # Drop rows where 'Daily Mean' or 'Daily AQI Value' are missing
+    data = data.dropna(subset=['Daily Mean', 'Daily AQI Value'])
+
+    # Display a preview of the filtered and sorted data
+    st.write("Filtered and Sorted Data Preview:")
     st.dataframe(data.head())
 
     # Dropdowns for selecting columns
@@ -45,19 +48,13 @@ try:
         ["None (Daily Data)", "Weekly", "Monthly"]
     )
 
-    # Dropdown for graph type
-    graph_type = st.selectbox(
-        "Select Graph Type",
-        ["Line", "Scatter", "Bar"]
-    )
-
-    # Simplify the data based on the selected aggregation level
+    # Aggregate data based on the selected aggregation level
     if aggregation == "Weekly":
         data = data.set_index('Date').resample('W').mean().reset_index()
     elif aggregation == "Monthly":
         data = data.set_index('Date').resample('M').mean().reset_index()
 
-    # Ensure no missing data after simplification
+    # Ensure no missing data after aggregation
     data = data[[x_column, y_column]].dropna()
 
     # Plot button
@@ -66,19 +63,8 @@ try:
         fig, ax = plt.subplots()
 
         # Line Plot
-        if graph_type == "Line":
-            ax.plot(data[x_column], data[y_column], marker='o', linestyle='-', linewidth=1)
-            ax.set_title(f"{y_column} vs {x_column} (Line Plot)")
-
-        # Scatter Plot
-        elif graph_type == "Scatter":
-            ax.scatter(data[x_column], data[y_column], s=10)
-            ax.set_title(f"{y_column} vs {x_column} (Scatter Plot)")
-
-        # Bar Plot
-        elif graph_type == "Bar":
-            ax.bar(data[x_column], data[y_column], width=10)
-            ax.set_title(f"{y_column} vs {x_column} (Bar Chart)")
+        ax.plot(data[x_column], data[y_column], marker='o', linestyle='-', linewidth=1)
+        ax.set_title(f"{y_column} vs {x_column} ({aggregation} Data)")
 
         # Enhance readability
         ax.set_xlabel(x_column)
@@ -87,7 +73,7 @@ try:
         plt.xticks(rotation=45)  # Rotate x-axis labels for better readability
 
         st.pyplot(fig)
-        st.write("Tip: Use weekly or monthly simplification to clean up noisy daily data.")
+        st.write(f"Displaying {aggregation.lower()} data. Original data was aggregated for clarity.")
 
 except FileNotFoundError:
     st.error(f"The file '{file_name}' was not found. Ensure it is included in the repository.")
