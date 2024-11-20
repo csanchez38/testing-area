@@ -86,6 +86,14 @@ if selected_files:
         # Group data for line and bar graphs
         monthly_data = combined_data.groupby(['Year', 'Month'])[y_column].mean().reset_index()
 
+        # Ensure every year has all 12 months
+        complete_months = pd.DataFrame(
+            [(year, month) for year in selected_years for month in range(1, 13)],
+            columns=['Year', 'Month']
+        )
+        monthly_data = pd.merge(complete_months, monthly_data, on=['Year', 'Month'], how='left')
+        monthly_data[y_column].fillna(0, inplace=True)  # Fill missing values with 0
+
         # Plot button
         if st.button("Plot Graph"):
             if graph_type == "Line":
@@ -114,13 +122,12 @@ if selected_files:
                 fig, ax = plt.subplots(figsize=(12, 6))
                 width = 0.15  # Width of each bar
                 months = range(1, 13)
-                x_positions = {year: [m + (i * width) for i, m in enumerate(months)] for year in selected_years}
 
                 for i, year in enumerate(selected_years):
                     year_data = monthly_data[monthly_data['Year'] == year]
                     ax.bar(
-                        [m + (i * width) for m in months], 
-                        year_data[y_column].values if len(year_data) == 12 else [0] * 12,
+                        [m + (i * width) for m in months],
+                        year_data[y_column].values,
                         width=width,
                         label=str(year),
                     )
