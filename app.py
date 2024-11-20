@@ -3,7 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # Title of the app
-st.title("California Air Quality Weekly Trends: Improved Readability")
+st.title("California Air Quality Weekly Trends")
 
 # File selection
 file_names = [f"California{year}.xlsx" for year in range(2019, 2025)]
@@ -11,6 +11,9 @@ selected_files = st.multiselect("Select files to compare", file_names, default=f
 
 if selected_files:
     try:
+        # Extract years directly from filenames
+        selected_years = [int(file.split("California")[1].split(".xlsx")[0]) for file in selected_files]
+
         # Combine data from selected files
         all_data = []
         for file_name in selected_files:
@@ -43,7 +46,7 @@ if selected_files:
             data['Date'] = pd.to_datetime(data['Date'], format='%m/%d/%Y', errors='coerce')
             data = data.dropna(subset=['Date'])  # Drop rows where 'Date' conversion failed
 
-            # Add a "Year", "Month", and "Week" column
+            # Add a "Year" and "Week" column
             data['Year'] = data['Date'].dt.year
             data['Week'] = data['Date'].dt.isocalendar().week
 
@@ -77,15 +80,8 @@ if selected_files:
         # Dropdown for selecting Y-axis column
         y_column = st.selectbox("Select Y-axis column", available_y_columns)
 
-        # Allow users to filter by specific years
-        available_years = combined_data['Year'].unique()
-        selected_years = st.multiselect("Select years to display", available_years, default=available_years)
-
-        # Filter the data to include only the selected years
-        filtered_data = combined_data[combined_data['Year'].isin(selected_years)]
-
         # Group data by Year and Week
-        weekly_data = filtered_data.groupby(['Year', 'Week'])[y_column].mean().reset_index()
+        weekly_data = combined_data.groupby(['Year', 'Week'])[y_column].mean().reset_index()
 
         # Plot button
         if st.button("Plot Graph"):
@@ -93,7 +89,7 @@ if selected_files:
             fig, ax = plt.subplots(figsize=(12, 6))
 
             # Plot data for each year
-            for year in weekly_data['Year'].unique():
+            for year in sorted(selected_years):
                 year_data = weekly_data[weekly_data['Year'] == year]
                 ax.plot(
                     year_data['Week'], 
@@ -104,7 +100,7 @@ if selected_files:
                     markersize=4,  # Adjust marker size for readability
                 )
 
-            ax.set_title(f"Weekly {y_column} Trends (Improved Readability)")
+            ax.set_title(f"Weekly {y_column} Trends")
 
             # Set labels with the appropriate unit of measurement
             ax.set_xlabel("Week")
