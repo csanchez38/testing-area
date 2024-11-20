@@ -39,27 +39,27 @@ try:
     x_column = st.selectbox("Select X-axis column", ['Date'])
     y_column = st.selectbox("Select Y-axis column", ['Daily Mean', 'Daily AQI Value'])
 
+    # Dropdown for data simplification
+    aggregation = st.selectbox(
+        "Simplify data by:",
+        ["None (Daily Data)", "Weekly", "Monthly"]
+    )
+
     # Dropdown for graph type
     graph_type = st.selectbox(
         "Select Graph Type",
         ["Line", "Scatter", "Bar"]
     )
 
-    # Add options for data aggregation
-    aggregation = st.selectbox(
-        "Select Aggregation Level",
-        ["None", "Weekly", "Monthly"]
-    )
+    # Simplify the data based on aggregation level
+    if aggregation == "Weekly":
+        data = data.set_index('Date').resample('W').mean().reset_index()
+    elif aggregation == "Monthly":
+        data = data.set_index('Date').resample('M').mean().reset_index()
 
     # Plot button
     if st.button("Plot Graph"):
-        # Resample data if aggregation is selected
-        if aggregation == "Weekly":
-            data = data.set_index('Date').resample('W').mean().reset_index()
-        elif aggregation == "Monthly":
-            data = data.set_index('Date').resample('M').mean().reset_index()
-
-        # Ensure no missing data after resampling
+        # Ensure no missing data after simplification
         data = data[[x_column, y_column]].dropna()
 
         # Create the plot
@@ -87,7 +87,7 @@ try:
         plt.xticks(rotation=45)  # Rotate x-axis labels for better readability
 
         st.pyplot(fig)
-        st.write("Tip: Use aggregation to clean up noisy daily data.")
+        st.write("Tip: Use weekly or monthly simplification to clean up noisy daily data.")
 
 except FileNotFoundError:
     st.error(f"The file '{file_name}' was not found. Ensure it is included in the repository.")
