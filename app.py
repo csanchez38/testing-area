@@ -3,7 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # Title of the app
-st.title("California Air Quality Trends with Enhanced Visualizations")
+st.title("California Air Quality Trends with Monthly Bar Comparison")
 
 # File selection
 file_names = [f"California{year}.xlsx" for year in range(2019, 2025)]
@@ -46,8 +46,9 @@ if selected_files:
             data['Date'] = pd.to_datetime(data['Date'], format='%m/%d/%Y', errors='coerce')
             data = data.dropna(subset=['Date'])  # Drop rows where 'Date' conversion failed
 
-            # Add a "Year" column
+            # Add "Year" and "Month" columns
             data['Year'] = data['Date'].dt.year
+            data['Month'] = data['Date'].dt.month
 
             # Append the data
             all_data.append(data)
@@ -82,8 +83,8 @@ if selected_files:
         # Dropdown for selecting graph type
         graph_type = st.selectbox("Select Graph Type", ["Line", "Bar", "Pie"])
 
-        # If user selects Line or Bar chart, group data by Year
-        grouped_data = combined_data.groupby('Year')[y_column].mean().reset_index()
+        # Group data for line and bar graphs
+        monthly_data = combined_data.groupby(['Year', 'Month'])[y_column].mean().reset_index()
 
         # Plot button
         if st.button("Plot Graph"):
@@ -91,33 +92,45 @@ if selected_files:
                 # Create the line plot
                 fig, ax = plt.subplots(figsize=(12, 6))
                 for year in selected_years:
-                    year_data = combined_data[combined_data['Year'] == year]
-                    weekly_data = year_data.groupby(year_data['Date'].dt.isocalendar().week)[y_column].mean()
+                    year_data = monthly_data[monthly_data['Year'] == year]
                     ax.plot(
-                        weekly_data.index, 
-                        weekly_data.values, 
+                        year_data['Month'], 
+                        year_data[y_column], 
                         marker='o', 
                         linestyle='-', 
                         label=str(year),
                         markersize=4,
                     )
-                ax.set_title(f"Weekly {y_column} Trends")
-                ax.set_xlabel("Week")
+                ax.set_title(f"Monthly {y_column} Trends")
+                ax.set_xlabel("Month")
                 ax.set_ylabel(f"{y_column} ({unit_of_measurement})")
                 ax.legend(title="Year", loc='upper left', bbox_to_anchor=(1, 1))
                 ax.grid(True, linestyle='--', alpha=0.7)
-                plt.xticks(rotation=45)
+                plt.xticks(ticks=range(1, 13), labels=['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])
                 st.pyplot(fig)
 
             elif graph_type == "Bar":
-                # Create the bar chart
-                fig, ax = plt.subplots(figsize=(10, 6))
-                ax.bar(grouped_data['Year'], grouped_data[y_column], color='skyblue')
-                ax.set_title(f"Average {y_column} by Year")
-                ax.set_xlabel("Year")
+                # Create the bar chart for monthly comparison
+                fig, ax = plt.subplots(figsize=(12, 6))
+                width = 0.15  # Width of each bar
+                months = range(1, 13)
+                x_positions = {year: [m + (i * width) for i, m in enumerate(months)] for year in selected_years}
+
+                for i, year in enumerate(selected_years):
+                    year_data = monthly_data[monthly_data['Year'] == year]
+                    ax.bar(
+                        [m + (i * width) for m in months], 
+                        year_data[y_column].values if len(year_data) == 12 else [0] * 12,
+                        width=width,
+                        label=str(year),
+                    )
+
+                ax.set_title(f"Monthly {y_column} Comparison by Year")
+                ax.set_xlabel("Month")
                 ax.set_ylabel(f"{y_column} ({unit_of_measurement})")
-                for i, v in enumerate(grouped_data[y_column]):
-                    ax.text(grouped_data['Year'][i], v + 0.05, f"{v:.2f}", ha='center')
+                ax.legend(title="Year", loc='upper left', bbox_to_anchor=(1, 1))
+                ax.set_xticks([m + (len(selected_years) / 2 - 0.5) * width for m in months])
+                ax.set_xticklabels(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])
                 st.pyplot(fig)
 
             elif graph_type == "Pie":
