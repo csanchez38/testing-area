@@ -20,9 +20,6 @@ try:
     data = pd.read_excel(file_name, sheet_name=selected_sheet, header=None)  # No header assumed
     data.columns = ['Date', 'Daily Mean', 'Units', 'Daily AQI Value']  # Rename columns explicitly
 
-    # Debugging info: Show column names
-    st.write("Columns in the dataset:", data.columns.tolist())
-
     # Drop rows where 'Date' or 'Daily Mean' are missing
     data = data.dropna(subset=['Date', 'Daily Mean'])
 
@@ -63,7 +60,7 @@ try:
             data = data.set_index('Date').resample('M').mean().reset_index()
 
         # Ensure no missing data after resampling
-        data = data.dropna(subset=[x_column, y_column])
+        data = data[[x_column, y_column]].dropna()
 
         # Create the plot
         fig, ax = plt.subplots()
