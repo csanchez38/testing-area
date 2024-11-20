@@ -3,7 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # Title of the app
-st.title("California Air Quality Weekly Trends")
+st.title("California Air Quality Trends with Enhanced Visualizations")
 
 # File selection
 file_names = [f"California{year}.xlsx" for year in range(2019, 2025)]
@@ -46,9 +46,8 @@ if selected_files:
             data['Date'] = pd.to_datetime(data['Date'], format='%m/%d/%Y', errors='coerce')
             data = data.dropna(subset=['Date'])  # Drop rows where 'Date' conversion failed
 
-            # Add a "Year" and "Week" column
+            # Add a "Year" column
             data['Year'] = data['Date'].dt.year
-            data['Week'] = data['Date'].dt.isocalendar().week
 
             # Append the data
             all_data.append(data)
@@ -80,45 +79,60 @@ if selected_files:
         # Dropdown for selecting Y-axis column
         y_column = st.selectbox("Select Y-axis column", available_y_columns)
 
-        # Group data by Year and Week
-        weekly_data = combined_data.groupby(['Year', 'Week'])[y_column].mean().reset_index()
+        # Dropdown for selecting graph type
+        graph_type = st.selectbox("Select Graph Type", ["Line", "Bar", "Pie"])
+
+        # If user selects Line or Bar chart, group data by Year
+        grouped_data = combined_data.groupby('Year')[y_column].mean().reset_index()
 
         # Plot button
         if st.button("Plot Graph"):
-            # Create the plot
-            fig, ax = plt.subplots(figsize=(12, 6))
+            if graph_type == "Line":
+                # Create the line plot
+                fig, ax = plt.subplots(figsize=(12, 6))
+                for year in selected_years:
+                    year_data = combined_data[combined_data['Year'] == year]
+                    weekly_data = year_data.groupby(year_data['Date'].dt.isocalendar().week)[y_column].mean()
+                    ax.plot(
+                        weekly_data.index, 
+                        weekly_data.values, 
+                        marker='o', 
+                        linestyle='-', 
+                        label=str(year),
+                        markersize=4,
+                    )
+                ax.set_title(f"Weekly {y_column} Trends")
+                ax.set_xlabel("Week")
+                ax.set_ylabel(f"{y_column} ({unit_of_measurement})")
+                ax.legend(title="Year", loc='upper left', bbox_to_anchor=(1, 1))
+                ax.grid(True, linestyle='--', alpha=0.7)
+                plt.xticks(rotation=45)
+                st.pyplot(fig)
 
-            # Plot data for each year
-            for year in sorted(selected_years):
-                year_data = weekly_data[weekly_data['Year'] == year]
-                ax.plot(
-                    year_data['Week'], 
-                    year_data[y_column], 
-                    marker='o', 
-                    linestyle='-', 
-                    label=str(year),
-                    markersize=4,  # Adjust marker size for readability
+            elif graph_type == "Bar":
+                # Create the bar chart
+                fig, ax = plt.subplots(figsize=(10, 6))
+                ax.bar(grouped_data['Year'], grouped_data[y_column], color='skyblue')
+                ax.set_title(f"Average {y_column} by Year")
+                ax.set_xlabel("Year")
+                ax.set_ylabel(f"{y_column} ({unit_of_measurement})")
+                for i, v in enumerate(grouped_data[y_column]):
+                    ax.text(grouped_data['Year'][i], v + 0.05, f"{v:.2f}", ha='center')
+                st.pyplot(fig)
+
+            elif graph_type == "Pie":
+                # Create the pie chart
+                total_by_year = combined_data.groupby('Year')[y_column].sum()
+                fig, ax = plt.subplots(figsize=(8, 8))
+                ax.pie(
+                    total_by_year,
+                    labels=total_by_year.index,
+                    autopct='%1.1f%%',
+                    startangle=90,
+                    colors=plt.cm.tab20.colors,
                 )
-
-            ax.set_title(f"Weekly {y_column} Trends")
-
-            # Set labels with the appropriate unit of measurement
-            ax.set_xlabel("Week")
-            if y_column == "Measurement":
-                ax.set_ylabel(f"Measurement ({unit_of_measurement})")
-            elif y_column == "Daily AQI Value":
-                ax.set_ylabel("Daily AQI Value")
-
-            # Add a legend for years
-            ax.legend(title="Year", loc='upper left', bbox_to_anchor=(1, 1))  # Move legend outside the plot
-
-            # Enhance readability
-            ax.grid(True, which='major', linestyle='--', linewidth=0.5, alpha=0.7)  # Add gridlines
-            ax.set_xticks(range(1, 54))  # Weeks range from 1 to 53
-            plt.xticks(rotation=45)  # Rotate x-axis labels for better readability
-
-            st.pyplot(fig)
-            st.write(f"Displaying weekly trends for selected years.")
+                ax.set_title(f"{y_column} Percentage Contribution by Year")
+                st.pyplot(fig)
 
     except FileNotFoundError:
         st.error(f"One or more selected files were not found. Ensure they are included in the repository.")
