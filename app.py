@@ -2,14 +2,14 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# File paths
-file_paths = {
-    "2024": "/mnt/data/California2024.xlsx",
-    "2023": "/mnt/data/California2023.xlsx",
-    "2022": "/mnt/data/California2022.xlsx",
-    "2021": "/mnt/data/California2021.xlsx",
-    "2020": "/mnt/data/California2020.xlsx",
-    "2019": "/mnt/data/California2019.xlsx",
+# File names (in the same directory as app.py)
+file_names = {
+    "2024": "California2024.xlsx",
+    "2023": "California2023.xlsx",
+    "2022": "California2022.xlsx",
+    "2021": "California2021.xlsx",
+    "2020": "California2020.xlsx",
+    "2019": "California2019.xlsx",
 }
 
 # Function to load data
@@ -40,7 +40,7 @@ selected_measurement = st.sidebar.selectbox("Select Measurement Type", measureme
 
 # Load and combine data
 dataframes = []
-for year, file in file_paths.items():
+for year, file in file_names.items():
     df = load_data(file, selected_sheet)
     if not df.empty:
         dataframes.append(df)
