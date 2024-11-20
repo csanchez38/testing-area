@@ -58,9 +58,13 @@ try:
 
     # Aggregate data based on the selected aggregation level
     if aggregation == "Weekly":
-        data = data.set_index('Date').resample('W').mean().reset_index()
+        # Resample only numeric columns and reset the index
+        numeric_data = data.set_index('Date')[['Measurement', 'Daily AQI Value']].resample('W').mean().reset_index()
+        data = numeric_data
     elif aggregation == "Monthly":
-        data = data.set_index('Date').resample('M').mean().reset_index()
+        # Resample only numeric columns and reset the index
+        numeric_data = data.set_index('Date')[['Measurement', 'Daily AQI Value']].resample('M').mean().reset_index()
+        data = numeric_data
 
     # Ensure no missing data after aggregation
     data = data[[x_column, y_column]].dropna()
